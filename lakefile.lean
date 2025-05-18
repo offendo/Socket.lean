@@ -1,4 +1,6 @@
 import Lake
+
+open System
 open Lake DSL
 
 package Socket {
@@ -11,19 +13,24 @@ lean_lib Socket
 def cDir   := "native"
 def ffiSrc := "native.c"
 def ffiO   := "ffi.o"
-def ffiLib := "ffi"
+def ffiLib := "libffi"
 
-target ffi.o (pkg : Package) : FilePath := do
+input_file ffi_static.c where
+  path := cDir / ffiSrc
+  text := true
+
+target ffi.o (pkg : NPackage _package.name) : FilePath := do
   let oFile := pkg.buildDir / ffiO
-  let srcJob ← inputFile <| pkg.dir / cDir / ffiSrc
-  buildFileAfterDep oFile srcJob fun srcFile => do
+  let srcJob ←  ffi_static.c.fetch
+  let job <- buildFileAfterDep oFile srcJob (fun srcFile => do
     let flags := #["-I", (← getLeanIncludeDir).toString, "-fPIC"]
-    compileO ffiSrc oFile srcFile flags
+    compileO oFile (cDir / ffiSrc) flags "cc")
+  return job
 
-extern_lib ffi (pkg : Package) := do
+extern_lib ffi pkg := do
+  let ffiO ←  ffi.o.fetch
   let name := nameToStaticLib ffiLib
-  let ffiO ← fetch <| pkg.target ``ffi.o
-  buildStaticLib (pkg.buildDir / "lib" / name) #[ffiO]
+  buildStaticLib (pkg.staticLibDir / "lib" / ffiLib) #[ffiO]
 
 script examples do
   let examplesDir ← ("examples" : FilePath).readDir

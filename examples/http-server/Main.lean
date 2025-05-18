@@ -3,6 +3,23 @@ import Socket
 open Socket
 
 /--
+\ Serve
+-/
+partial def talkToSocket (addr : SockAddr) (socket' : Socket) : IO Unit := do
+  let incoming <- String.fromUTF8! <$> socket'.recv 1024
+  match incoming.length with
+  -- End the server
+    | Nat.zero => 
+      IO.println s!"Close connection to {addr}!"
+      socket'.close
+  -- Loop the server
+    | _ => do 
+      let strSend := "HTTP/1.1 200 OK\r\n" ++ s!"Content-Length:{incoming.length}" ++ "\r\n\r\n" ++ incoming ++ "\r\n\r\n"
+      let bytesSend ← socket'.send strSend.toUTF8
+      IO.println s!"sent {bytesSend} bytes"
+      talkToSocket addr socket'
+
+/--
   Entry
 -/
 def main : IO Unit := do
@@ -22,13 +39,5 @@ def main : IO Unit := do
   -- serving
   repeat do
     let (remoteAddr, socket') ← socket.accept
-    let t ← IO.asTask do
-      let strSend := 
-        "HTTP/1.1 200 OK" ++
-        "Content-Length:5" ++
-        "\r\n\r\n" ++
-        "Hello" ++
-        "\r\n\r\n"
-      let bytesSend ← socket'.send strSend.toUTF8
-      socket'.close
-    IO.println s!"Incoming: {remoteAddr}"
+    IO.println s!"Incoming request from {remoteAddr}"
+    let output ←  IO.asTask $ talkToSocket remoteAddr socket'
