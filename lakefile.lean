@@ -24,7 +24,7 @@ target ffi.o (pkg : NPackage _package.name) : FilePath := do
   let srcJob ←  ffi_static.c.fetch
   let job <- buildFileAfterDep oFile srcJob (fun srcFile => do
     let flags := #["-I", (← getLeanIncludeDir).toString, "-fPIC"]
-    compileO oFile (pkg.buildDir / cDir / ffiSrc) flags "cc")
+    compileO oFile (pkg.dir / cDir / ffiSrc) flags "cc")
   return job
 
 extern_lib ffi pkg := do
