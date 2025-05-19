@@ -24,12 +24,11 @@ target ffi.o (pkg : NPackage _package.name) : FilePath := do
   let srcJob ←  ffi_static.c.fetch
   let job <- buildFileAfterDep oFile srcJob (fun srcFile => do
     let flags := #["-I", (← getLeanIncludeDir).toString, "-fPIC"]
-    compileO oFile (pkg.dir / cDir / ffiSrc) flags "cc")
+    compileO oFile srcFile flags "cc")
   return job
 
 extern_lib ffi pkg := do
   let ffiO ←  ffi.o.fetch
-  let name := nameToStaticLib ffiLib
   buildStaticLib (pkg.staticLibDir / "lib" / ffiLib) #[ffiO]
 
 script examples do
