@@ -10,26 +10,22 @@ package Socket {
 @[default_target]
 lean_lib Socket
 
-def cDir   := "native"
-def ffiSrc := "native.c"
-def ffiO   := "ffi.o"
-def ffiLib := "libffi"
-
-input_file ffi_static.c where
-  path := cDir / ffiSrc
-  text := true
+def cDir   : FilePath := "native"
+def ffiSrc : FilePath := "native.c"
+def ffiO   : FilePath := "ffi.o"
+def ffiLib : FilePath := "libffi"
 
 target ffi.o (pkg : NPackage _package.name) : FilePath := do
   let oFile := pkg.buildDir / ffiO
-  let srcJob ←  ffi_static.c.fetch
-  let job <- buildFileAfterDep oFile srcJob (fun srcFile => do
+  let srcJob ←  inputFile (pkg.dir / cDir / ffiSrc) False
+  let job <- buildFileAfterDep oFile srcJob (fun _ => do
     let flags := #["-I", (← getLeanIncludeDir).toString, "-fPIC"]
-    compileO oFile srcFile flags "cc")
+    compileO oFile (pkg.buildDir / cDir / ffiSrc) flags "cc")
   return job
 
 extern_lib ffi pkg := do
   let ffiO ←  ffi.o.fetch
-  buildStaticLib (pkg.staticLibDir / "lib" / ffiLib) #[ffiO]
+  buildStaticLib (pkg.buildDir / "lib" / ffiLib) #[ffiO]
 
 script examples do
   let examplesDir ← ("examples" : FilePath).readDir
